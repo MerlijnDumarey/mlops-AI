@@ -1,0 +1,30 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+
+name: split_dataset
+display_name: Split Dataset into Train/Val/Test
+version: 0.1.2
+type: command
+description: Takes cleaned_data and splits into train/val/test by label.
+
+environment: azureml:aml-Pillow:0.1.2
+code: ./code
+command: >
+  python split.py
+  --input_dir ${{inputs.cleaned_data}}
+  --output_dir ${{outputs.output_data}}
+  --train_ratio ${{inputs.train_ratio}}
+  --val_ratio ${{inputs.val_ratio}}
+
+inputs:
+  cleaned_data:
+    type: uri_folder
+  train_ratio:
+    type: number
+    default: 0.8
+  val_ratio:
+    type: number
+    default: 0.1
+
+outputs:
+  output_data:
+    type: uri_folder
