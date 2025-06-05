@@ -1,0 +1,28 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+
+name: data_prep
+version: 0.1.8
+display_name: Data preparation
+is_deterministic: True
+type: command
+description: Reads a train_data & train_label. Cleans it and returns cleaned version of all.
+
+environment: azureml:aml-Pillow:0.1.2
+resources:
+  instance_count: 1
+
+code: ./code
+command: >
+  python dataprep.py
+  --train_data ${{inputs.train_data}}
+  --train_label ${{inputs.train_label}}
+  --output ${{outputs.output_data}}
+inputs:
+  train_data:
+    type: uri_file
+  train_label:
+    type: uri_file
+
+outputs:
+    output_data:
+      type: uri_folder
