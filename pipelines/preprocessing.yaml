@@ -1,0 +1,55 @@
+$schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
+
+type: pipeline
+name: preprocessing-20250605-22
+display_name: Prepocessing 22
+experiment_name: Preprocessing 22
+
+inputs:
+  train_data:
+    type: uri_file
+    path: azureml:train_data:1
+  train_label:
+    type: uri_file
+    path: azureml:train_label:1
+  train_ratio: 0.8
+  val_ratio: 0.1
+
+outputs:
+  cleaned_data:
+    mode: upload
+    name: cleaned_train_data
+    version: 6
+    type: uri_folder
+  splitted_data:
+    mode: upload
+    name: splitted_train_data
+    version: 3
+    type: uri_folder
+  
+
+settings:
+  default_compute: azureml:ai-training-compute
+
+jobs:
+  data_prep:
+    type: command
+    component: ../components/dataprep/dataprep.yaml
+    inputs:
+      train_data:
+        type: uri_file
+        path: ${{parent.inputs.train_data}}
+      train_label:
+        type: uri_file
+        path: ${{parent.inputs.train_label}}
+    outputs:
+      output_data: ${{ parent.outputs.cleaned_data }}  
+  split:
+    type: command
+    component: ../components/dataprep/split.yaml
+    inputs:
+      cleaned_data: ${{parent.jobs.data_prep.outputs.output_data}}
+      train_ratio: ${{parent.inputs.train_ratio}}
+      val_ratio: ${{parent.inputs.val_ratio}}
+    outputs:
+      output_data: ${{parent.outputs.splitted_data}}
