@@ -16,7 +16,7 @@ env:
 
 jobs:
   run-pipelines:
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux]
 
     steps:
     - name: Checkout repository
