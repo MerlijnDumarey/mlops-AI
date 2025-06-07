@@ -1,0 +1,41 @@
+$schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
+
+type: pipeline
+name: training-20250607-24
+display_name: training 24
+experiment_name: training 24
+
+inputs:
+  epochs: 5
+  splitted_train_data:
+    type: uri_folder
+    path: azureml:splitted_train_data:4
+outputs:
+  model: 
+    mode: upload
+  registration_details:
+    mode: upload
+
+settings:
+  # default_compute: serverless
+  default_compute: azureml:ai-training-compute
+
+jobs:
+  training:
+    type: command
+    component: ../components/training/training.yaml
+    inputs:
+      splitted_data: ${{parent.inputs.splitted_train_data}}
+      epochs: ${{parent.inputs.epochs}}
+    outputs:
+      output_folder: ${{parent.outputs.model}}
+
+  register:
+    type: command
+    component: azureml://registries/azureml/components/register_model/versions/0.0.9
+    inputs:
+      model_name: movement-classification
+      model_type: custom_model
+      model_path: ${{parent.jobs.training.outputs.output_folder}}
+    outputs:
+      registration_details_folder: ${{ parent.outputs.registration_details }}
