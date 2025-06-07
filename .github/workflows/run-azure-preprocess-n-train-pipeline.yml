@@ -1,0 +1,40 @@
+name: Run Azure ML Dataprep and Training Pipelines
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'pipelines/**.yaml'
+      - '.github/workflows/run-azure-preprocess-n-train-pipeline.yml'
+
+jobs:
+  run-pipelines:
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Set Azure subscription
+      run: az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Run preprocessing pipeline
+      run: |
+        az ml job create \
+          --file pipelines/preprocessing.yaml \
+          --resource-group mlops-project \
+          --workspace-name mlops-project-ai
+
+    - name: Run training pipeline
+      run: |
+        az ml job create \
+          --file pipelines/training.yaml \
+          --resource-group mlops-project \
+          --workspace-name mlops-project-ai
