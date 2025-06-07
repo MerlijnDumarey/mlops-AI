@@ -9,32 +9,80 @@ on:
       - 'pipelines/**.yaml'
       - '.github/workflows/run-azure-preprocess-n-train-pipeline.yml'
 
+env:
+  GROUP: mlops-project
+  WORKSPACE: mlops-project-ai
+  LOCATION: westeurope
+
 jobs:
   run-pipelines:
     runs-on: self-hosted
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Login to Azure
-      uses: azure/login@v1
+      uses: azure/login@v2
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Set Azure subscription
-      run: az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+    - name: Azure -- Create compute
+      uses: Azure/CLI@v2.1.0
+      with:
+        azcliversion: 2.64.0
+        inlineScript: |
+          az extension add --name ml
+          az configure --defaults group=$GROUP workspace=$WORKSPACE location=$LOCATION
+          az ml compute create --file ./environment/compute.yaml
+          
+    - name: Azure -- Start Compute
+      uses: azure/CLI@v2.1.0
+      with:
+        azcliversion: 2.64.0
+        inlineScript: |
+          az extension add --name ml -y
+          az configure --defaults group=$GROUP workspace=$WORKSPACE location=$LOCATION
+          az ml compute start --name ai-training-compute
+      continue-on-error: true
 
-    - name: Run preprocessing pipeline
-      run: |
-        az ml job create \
-          --file pipelines/preprocessing.yaml \
-          --resource-group mlops-project \
-          --workspace-name mlops-project-ai
+    - name: Azure -- Environment Setup
+      uses: Azure/CLI@v2.1.0
+      with:
+        azcliversion: 2.64.0
+        inlineScript: |
+          az extension add --name ml
+          az configure --defaults group=$GROUP workspace=$WORKSPACE location=$LOCATION
+          az ml environment create --file ./environment/pillow.yaml
+          az ml environment create --file ./environment/tensorflow.yaml
 
-    - name: Run training pipeline
-      run: |
-        az ml job create \
-          --file pipelines/training.yaml \
-          --resource-group mlops-project \
-          --workspace-name mlops-project-ai
+    - name: Azure -- Component Setup
+      uses: Azure/CLI@v2.1.0
+      with:
+        azcliversion: 2.64.0
+        inlineScript: |
+          az extension add --name ml
+          az configure --defaults group=$GROUP workspace=$WORKSPACE location=$LOCATION
+          az ml components create --file ./components/dataprep/dataprep.yaml
+          az ml components create --file ./components/dataprep/split.yaml
+          az ml components create --file ./components/training/training.yaml
+
+    - name: Azure -- Preprocessing Pipeline Setup
+      uses: Azure/CLI@v2.1.0
+      with:
+        azcliversion: 2.64.0
+        inlineScript: |
+          az extension add --name ml
+          az configure --defaults group=$GROUP workspace=$WORKSPACE location=$LOCATION
+          az ml job create --file ./pipelines/preprocessing.yaml --stream --set name=preprocessing-${{ github.sha }}-${{ github.run_id }}
+
+    - name: Azure -- Training Preprocessing Pipeline Setup
+      uses: Azure/CLI@v2.1.0
+      with:
+        azcliversion: 2.64.0
+        inlineScript: |
+          az extension add --name ml
+          az configure --defaults group=$GROUP workspace=$WORKSPACE location=$LOCATION
+          az ml job create --file ./pipelines/training.yaml --stream --set name=training-${{ github.sha }}-${{ github.run_id }}
+          az ml compute stop --name ai-training-compute
+        continue-on-error: true
