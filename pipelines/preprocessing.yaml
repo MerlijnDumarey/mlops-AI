@@ -1,9 +1,9 @@
 $schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
 
 type: pipeline
-name: preprocessing-20250605-22
-display_name: Prepocessing 22
-experiment_name: Preprocessing 22
+name: preprocessing-20250607-3
+display_name: Prepocessing 3
+experiment_name: Preprocessing 3
 
 inputs:
   train_data:
@@ -19,12 +19,10 @@ outputs:
   cleaned_data:
     mode: upload
     name: cleaned_train_data
-    version: 6
     type: uri_folder
   splitted_data:
     mode: upload
     name: splitted_train_data
-    version: 3
     type: uri_folder
   
 
