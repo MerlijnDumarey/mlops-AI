@@ -29,9 +29,12 @@ jobs:
 
     - name: Install Azure ML CLI extension
       run: |
+        python3 -m venv .venv
+        source .venv/bin/activate
+        pip install --upgrade pip
+        pip install rpds-py
         az extension remove --name ml || true
         az extension add --name ml --allow-preview
-        pip install --upgrade rpds-py  # Fix for common ML extension issue
         az configure --defaults group=$GROUP workspace=$WORKSPACE location=$LOCATION
 
     - name: Create Azure ML Compute
