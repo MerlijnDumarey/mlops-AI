@@ -48,8 +48,8 @@ jobs:
 
     - name: Create Environments
       run: |
-        az ml environment create --file ./environment/pillow.yaml
-        az ml environment create --file ./environment/tensorflow.yaml
+        az ml environment create --file ./environment/pillow.yaml || true
+        az ml environment create --file ./environment/tensorflow.yaml || true
 
     - name: Create Components
       run: |
