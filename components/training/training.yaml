@@ -1,0 +1,25 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+version: 0.1.24
+type: command
+name: training
+display_name: Training an AI model
+description: Trains an AI model by inputting a lot of training and testing data.
+
+code: code/.
+environment: azureml:aml-Tensorflow:0.1.0
+command: 'python train.py
+  --splitted-data-folder ${{inputs.splitted_data}}
+  --output-folder ${{outputs.output_folder}}
+  --epochs ${{inputs.epochs}}
+  '
+
+inputs:
+  epochs:
+    optional: false
+    type: number
+  splitted_data:
+    optional: false
+    type: uri_folder
+outputs:
+  output_folder:
+    type: uri_folder
