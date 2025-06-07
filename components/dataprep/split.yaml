@@ -2,7 +2,6 @@ $schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.jso
 
 name: split_dataset
 display_name: Split Dataset into Train/Val/Test
-version: 0.1.3
 type: command
 description: Takes cleaned_data and splits into train/val/test by label.
 

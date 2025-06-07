@@ -1,7 +1,6 @@
 $schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
 
 name: data_prep
-version: 0.1.10
 display_name: Data preparation
 is_deterministic: True
 type: command
