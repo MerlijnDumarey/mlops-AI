@@ -53,9 +53,9 @@ jobs:
 
     - name: Create Components
       run: |
-        az ml component create --file ./components/dataprep/dataprep.yaml
-        az ml component create --file ./components/dataprep/split.yaml
-        az ml component create --file ./components/training/training.yaml
+        az ml component create --file ./components/dataprep/dataprep.yaml --set version=0.1.${{ github.run_number }}
+        az ml component create --file ./components/dataprep/split.yaml --set version=0.1.${{ github.run_number }}
+        az ml component create --file ./components/training/training.yaml --set version=0.1.${{ github.run_number }}
 
     - name: Run Preprocessing Pipeline
       run: |
