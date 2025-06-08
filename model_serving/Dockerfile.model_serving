@@ -1,0 +1,16 @@
+FROM python:3.9-slim-buster
+
+WORKDIR /app
+
+COPY requirements.txt.model_serving .
+RUN pip install --no-cache-dir -r requirements.txt.model_serving 
+
+COPY model_serving.py . 
+
+RUN mkdir -p /app/model
+
+COPY model.pkl.temp /app/model/model.pkl
+
+EXPOSE 8501
+
+CMD ["uvicorn", "model_server:app", "--host", "0.0.0.0", "--port", "8501"]
