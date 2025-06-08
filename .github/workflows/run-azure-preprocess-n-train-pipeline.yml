@@ -15,11 +15,12 @@ env:
   LOCATION: westeurope
 
 jobs:
-  run-pipelines:
-    runs-on: 
-      - self-hosted
-      - Linux
-      - ubuntu-latest
+  deploy-to-kubernetes:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [self-hosted, ubuntu-latest]
+    runs-on: ${{ matrix.runner }}
 
     steps:
     - name: Checkout repository

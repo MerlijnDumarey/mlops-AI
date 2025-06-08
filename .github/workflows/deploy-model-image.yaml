@@ -30,10 +30,11 @@ env:
 
 jobs:
   build-and-deploy-model-image:
-    runs-on: 
-      - self-hosted
-      - Linux
-      - ubuntu-latests
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [self-hosted, ubuntu-latest]
+    runs-on: ${{ matrix.runner }}
 
     steps:
     - name: Checkout his repository
