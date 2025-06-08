@@ -16,7 +16,10 @@ env:
 
 jobs:
   run-pipelines:
-    runs-on: [self-hosted, Linux, ubuntu-latest]
+    runs-on: 
+      - self-hosted
+      - Linux
+      - ubuntu-latest
 
     steps:
     - name: Checkout repository

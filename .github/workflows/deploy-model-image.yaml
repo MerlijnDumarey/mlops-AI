@@ -30,7 +30,10 @@ env:
 
 jobs:
   build-and-deploy-model-image:
-    runs-on: [self-hosted, Linux, ubuntu-latest]
+    runs-on: 
+      - self-hosted
+      - Linux
+      - ubuntu-latests
 
     steps:
     - name: Checkout his repository
