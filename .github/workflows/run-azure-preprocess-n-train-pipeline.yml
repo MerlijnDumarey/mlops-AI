@@ -72,3 +72,28 @@ jobs:
           --set name=training-${{ github.sha }}-${{ github.run_id }}
         az ml compute stop --name ai-training-compute
       continue-on-error: true
+
+    - name: Register Model
+      run: |
+        echo "Simulating model output file creation..."
+        mkdir -p ./model_output
+        echo "dummy model content" > ./model_output/model.pkl
+
+        echo "Registering model..."
+        az ml model create \
+          --name ${{ env.MODEL_NAME_IN_AML }} \
+          --version 0.2.${{ github.run_number }} \
+          --path ./model_output/model.pkl \
+          --description "Model trained from workflow run ${{ github.run_id }}" \
+          --tag "source"="github-actions" \
+          --tag "training_run_id"="${{ github.run_id }}"
+      id: register_model
+      continue-on-error: false
+
+    - name: Trigger Model Deployment Workflow
+      uses: peter-evans/repository-dispatch@v3
+      with:
+        token: ${{ secrets.REPO_DISPATCH_PAT }}
+        repository: ${{ env.API_REPOSITORY_FULL_NAME }}
+        event-type: new-model-available
+        client-payload: '{"run_id": "${{ github.run_id }}", "model_version": "0.2.${{ github.run_number }}", "model_name": "${{ env.MODEL_NAME_IN_AML }}"}'
