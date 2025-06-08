@@ -1,0 +1,155 @@
+# his_repo/.github/workflows/deploy-model-image.yml
+
+name: Deploy Model Image to ACR and Trigger API Update
+
+on:
+  # This workflow will be triggered by a custom event from the training pipeline
+  repository_dispatch:
+    types: [new-model-available]
+  # For manual testing, you can also use workflow_dispatch:
+  workflow_dispatch:
+    inputs:
+      model_version:
+        description: 'Version of the model to deploy (e.g., 0.2.123)'
+        required: true
+        default: 'latest' # Default to 'latest' for manual trigger
+      model_name:
+        description: 'Name of the model in Azure ML Registry'
+        required: true
+        default: ${{ vars.MODEL_NAME_IN_AML }}
+
+env:
+  # These are GitHub Repository Variables, set by your colleague
+  PROJECT_RESOURCE_GROUP: ${{ vars.PROJECT_RESOURCE_GROUP }}
+  AZURE_ML_WORKSPACE_NAME: ${{ vars.AZURE_ML_WORKSPACE_NAME }}
+  AZURE_REGION: ${{ vars.AZURE_REGION }}
+  AZURE_CONTAINER_REGISTRY_NAME: ${{ vars.AZURE_CONTAINER_REGISTRY_NAME }}
+  MODEL_NAME_IN_AML: ${{ vars.MODEL_NAME_IN_AML }}
+  API_REPOSITORY_FULL_NAME: ${{ vars.API_REPOSITORY_FULL_NAME }}
+  MODEL_SERVER_IMAGE_BASE_NAME: ${{ vars.MODEL_SERVER_IMAGE_BASE_NAME }}
+
+jobs:
+  build-and-deploy-model-image:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [self-hosted, ubuntu-latest]
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+    - name: Checkout his repository
+      uses: actions/checkout@v4
+
+    - name: Login to Azure
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS_HIS_REPO }} # set this secret in your repo's secrets
+
+    - name: Install Azure ML CLI extension
+      run: |
+        python3 -m venv .venv
+        source .venv/bin/activate
+        pip install --upgrade pip
+        pip install rpds-py
+        az extension remove --name ml || true
+        az extension add --name ml --allow-preview
+        az configure --defaults group=$PROJECT_RESOURCE_GROUP workspace=$AZURE_ML_WORKSPACE_NAME location=$AZURE_REGION
+
+    - name: Determine Model Version
+      id: determine_model_version
+      run: |
+        # Prioritize version from repository_dispatch, then workflow_dispatch, then latest
+        MODEL_VER=""
+        if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+          MODEL_VER="${{ github.event.client_payload.model_version }}"
+          MODEL_NAME="${{ github.event.client_payload.model_name }}"
+        else # workflow_dispatch
+          MODEL_VER="${{ github.event.inputs.model_version }}"
+          MODEL_NAME="${{ github.event.inputs.model_name }}"
+        fi
+
+        if [ "$MODEL_VER" == "latest" ]; then
+          echo "Fetching latest model version for $MODEL_NAME from Azure ML..."
+          MODEL_VER=$(az ml model list --name $MODEL_NAME --query "[0].version" -o tsv)
+          echo "Latest model version is $MODEL_VER"
+        fi
+        echo "model_version=$MODEL_VER" >> $GITHUB_OUTPUT
+        echo "model_name=$MODEL_NAME" >> $GITHUB_OUTPUT # Pass actual model name if from payload
+
+    - name: Download Model Artifact
+      id: download_model
+      run: |
+        echo "Downloading model artifact for model '${{ steps.determine_model_version.outputs.model_name }}' version '${{ steps.determine_model_version.outputs.model_version }}'..."
+        # This command downloads the model into a directory named after the model version
+        az ml model download \
+          --name ${{ steps.determine_model_version.outputs.model_name }} \
+          --version ${{ steps.determine_model_version.outputs.model_version }} \
+          --download-path ./downloaded_model_v${{ steps.determine_model_version.outputs.model_version }}
+        
+        # Assume the downloaded model is in a subdirectory 'model' within the downloaded path
+        # Adjust 'model.pkl' if your model artifact has a different name
+        DOWNLOADED_MODEL_FILE="./downloaded_model_v${{ steps.determine_model_version.outputs.model_version }}/model.pkl"
+        
+        # Verify the file exists (important for debugging)
+        if [ ! -f "$DOWNLOADED_MODEL_FILE" ]; then
+            echo "ERROR: Downloaded model file not found at $DOWNLOADED_MODEL_FILE"
+            exit 1
+        fi
+        echo "downloaded_model_file_path=$DOWNLOADED_MODEL_FILE" >> $GITHUB_OUTPUT
+
+    - name: Login to Azure Container Registry
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ env.AZURE_CONTAINER_REGISTRY_NAME }}.azurecr.io
+        username: ${{ secrets.AZURE_CREDENTIALS_HIS_REPO.clientId }}
+        password: ${{ secrets.AZURE_CREDENTIALS_HIS_REPO.clientSecret }}
+
+    - name: Build Model Server Docker image
+      run: |
+        # Copy the downloaded model into the Docker build context
+        # The 'model.pkl.temp' name matches the COPY instruction in Dockerfile.model_server
+        cp ${{ steps.download_model.outputs.downloaded_model_file_path }} ./model_serving/model.pkl.temp
+        
+        # Build the image using the base name and the determined model version
+        DOCKER_IMAGE_TAG="${{ env.AZURE_CONTAINER_REGISTRY_NAME }}.azurecr.io/${{ env.MODEL_SERVER_IMAGE_BASE_NAME }}:${{ steps.determine_model_version.outputs.model_version }}"
+        echo "Building Docker image: $DOCKER_IMAGE_TAG"
+        docker build -f ./model_serving/Dockerfile.model_server -t $DOCKER_IMAGE_TAG ./model_serving
+        
+        # Clean up the temporary model file in the build context
+        rm ./model_serving/model.pkl.temp
+
+    - name: Push Model Server Docker image
+      run: |
+        DOCKER_IMAGE_TAG="${{ env.AZURE_CONTAINER_REGISTRY_NAME }}.azurecr.io/${{ env.MODEL_SERVER_IMAGE_BASE_NAME }}:${{ steps.determine_model_version.outputs.model_version }}"
+        echo "Pushing Docker image: $DOCKER_IMAGE_TAG"
+        docker push $DOCKER_IMAGE_TAG
+
+    - name: Checkout your API Repo to update K8s manifests
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ env.API_REPOSITORY_FULL_NAME }}
+        token: ${{ secrets.REPO_UPDATE_PAT }} # make a PAT for the repo 
+        path: ./my_api_repo_checkout # Checkout your repo into a sub-directory
+
+    - name: Update Kubernetes file with new model server image version
+      run: |
+        # Navigate to the checked-out API repository
+        cd ./my_api_repo_checkout
+        
+        NEW_IMAGE_FULL_PATH="${{ env.AZURE_CONTAINER_REGISTRY_NAME }}.azurecr.io/${{ env.MODEL_SERVER_IMAGE_BASE_NAME }}:${{ steps.determine_model_version.outputs.model_version }}"
+        K8S_FILE_PATH="./kubernetes/model-server-deployment.yaml"
+
+        echo "Updating image in $K8S_FILE_PATH to: $NEW_IMAGE_FULL_PATH"
+        # The sed command now targets a specific placeholder for replacement.
+        # This makes the update more robust.
+        sed -i "s|image: MODEL_SERVER_IMAGE_PLACEHOLDER|image: ${NEW_IMAGE_FULL_PATH}|g" "$K8S_FILE_PATH"
+
+        # Git operations to commit and push the change to your repo
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add "$K8S_FILE_PATH"
+        git diff --staged # Show changes before commit
+        git commit -m "Automated: Update model server image to ${NEW_IMAGE_FULL_PATH} from training run ${{ github.run_id }}" || echo "No changes to commit"
+        git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.REPO_UPDATE_PAT }}
