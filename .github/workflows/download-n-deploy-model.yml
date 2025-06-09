@@ -1,0 +1,92 @@
+name: Download and Deploy model
+
+on:
+  workflow_dispatch:
+
+env:
+  GROUP: mlops-project
+  WORKSPACE: mlops-project-ai
+  LOCATION: westeurope
+
+jobs:
+  download:
+    runs-on: [self-hosted, Linux]
+    steps:
+
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    - name: Set up Azure ML CLI in virtual environment
+      run: |
+        python3 -m venv .venv
+        source .venv/bin/activate
+        pip install --upgrade pip
+        pip install rpds-py
+        az extension remove --name ml || true
+        az extension add --name ml --allow-preview
+        az configure --defaults group=$GROUP workspace=$WORKSPACE location=$LOCATION
+      
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: Download Azure ML Model
+      run: |
+        az account show
+        az --version
+        VERSION=$(az ml model list --name movement-classification --query "[0].version" -o tsv | xargs)
+        echo "Using model version: $VERSION"
+        az ml model show --name movement-classification --version 3
+        echo "$VERSION" | od -c
+        AZURE_CORE_LOG_LEVEL=DEBUG az ml model download \
+          --name movement-classification \
+          --version 3 \
+          --download-path ./movement-classification \
+          --resource-group $GROUP \
+          --workspace-name $WORKSPACE \
+          --debug
+      env:
+        GROUP: mlops-project
+        WORKSPACE: mlops-project-ai
+        LOCATION: westeurope
+
+    - name: Upload downloaded model as artifact
+      uses: actions/upload-artifact@v4.3.1
+      with:
+        name: movement-model
+        path: ./movement-classification
+
+
+  deploy:
+    needs: download
+    runs-on: [self-hosted, Linux]
+    steps:
+    - name: Download model artifact
+      uses: actions/download-artifact@v4.1.7
+      with:
+        name: movement-model
+        path: movement-classification
+
+    - name: Docker -- Gather Tags
+      id: docker-meta-data
+      uses: docker/metadata-action@v5.5.1
+      with:
+        images: merlijn123/mlops-movement-classification-ai
+        tags: |
+          type=ref,event=branch
+          type=sha
+
+    - name: Docker -- Login to Docker Hub
+      uses: docker/login-action@v3.2.0
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+
+    - name: Docker Build and push
+      uses: docker/build-push-action@v5.3.0
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.docker-meta-data.outputs.tags }}
+
