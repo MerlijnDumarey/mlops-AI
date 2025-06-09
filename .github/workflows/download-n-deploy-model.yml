@@ -41,7 +41,7 @@ jobs:
         echo "$VERSION" | od -c
         AZURE_CORE_LOG_LEVEL=DEBUG az ml model download \
           --name movement-classification \
-          --version "$VERSION" \
+          --version 3 \
           --download-path ./movement-classification \
           --resource-group $GROUP \
           --workspace-name $WORKSPACE \
