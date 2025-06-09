@@ -72,7 +72,7 @@ jobs:
       id: docker-meta-data
       uses: docker/metadata-action@v5.5.1
       with:
-        images: ghcr.io/merlijn123/mlops-movement-classification-ai
+        images: merlijn123/mlops-movement-classification-ai
         tags: |
           type=ref,event=branch
           type=sha
