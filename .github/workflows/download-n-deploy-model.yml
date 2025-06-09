@@ -51,6 +51,12 @@ jobs:
         WORKSPACE: mlops-project-ai
         LOCATION: westeurope
 
+    - name: Upload downloaded model as artifact
+      uses: actions/upload-artifact@v4.3.1
+      with:
+        name: movement-model
+        path: ./movement-classification
+
 
   deploy:
     needs: download
