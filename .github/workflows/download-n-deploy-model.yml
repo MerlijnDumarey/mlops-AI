@@ -15,11 +15,6 @@ jobs:
 
     - name: Check out repository
       uses: actions/checkout@v4
-      
-    - name: Azure Login
-      uses: azure/login@v2
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     - name: Set up Azure ML CLI in virtual environment
       run: |
@@ -30,6 +25,11 @@ jobs:
         az extension remove --name ml || true
         az extension add --name ml --allow-preview
         az configure --defaults group=$GROUP workspace=$WORKSPACE location=$LOCATION
+      
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
         
     - name: Download Azure ML model
       run: |
