@@ -26,7 +26,9 @@ jobs:
       with:
         azcliversion: 2.64.0
         inlineScript: |
-          az extension add --name ml -y
+          az config set extension.use_dynamic_install=yes_without_prompt
+          az extension remove --name ml || true
+          az extension add --name ml --allow-preview
           az configure --defaults group=$GROUP workspace=$WORKSPACE location=$LOCATION
           VERSION=$(az ml model list -n movement-classification --query "[0].version" -o tsv)
           az ml model download --name movement-classification --version $VERSION --download-path ./movement-classification
