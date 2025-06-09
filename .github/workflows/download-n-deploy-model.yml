@@ -27,6 +27,7 @@ jobs:
         az extension remove --name ml || true
         az extension add --name ml --allow-preview
         az configure --defaults group=$GROUP workspace=$WORKSPACE location=$LOCATION
+        az ml workspace show --name $WORKSPACE --resource-group $GROUP
         VERSION=$(az ml model list -n movement-classification --workspace-name $WORKSPACE --resource-group $GROUP --query "[0].version" -o tsv)
         az ml model download --name movement-classification --version $VERSION --workspace-name $WORKSPACE --resource-group $GROUP --download-path ./movement-classification
     
