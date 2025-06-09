@@ -21,6 +21,11 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+    - name: Install Python dependencies for Azure ML
+      run: |
+        python3 -m pip install --upgrade pip
+        pip install azure-ai-ml
+
     - name: Azure -- Download Model
       run: |
         az config set extension.use_dynamic_install=yes_without_prompt
