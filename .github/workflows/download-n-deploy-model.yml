@@ -35,7 +35,7 @@ jobs:
       run: |
         az account show
         az --version
-        VERSION=$(az ml model list --name movement-classification --query "[0].version" -o tsv)
+        VERSION=$(az ml model list --name movement-classification --query "[0].version" -o tsv | xargs)
         echo "Using model version: $VERSION"
         az ml model show --name movement-classification --version 3
         AZURE_CORE_LOG_LEVEL=DEBUG az ml model download \
