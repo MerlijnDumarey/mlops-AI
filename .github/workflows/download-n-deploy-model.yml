@@ -68,9 +68,6 @@ jobs:
         name: movement-model
         path: movement-classification
 
-    - name: Copy Dockerfile
-      run: cp ./Dockerfile .
-
     - name: Docker -- Gather Tags
       id: docker-meta-data
       uses: docker/metadata-action@v5.5.1
