@@ -16,15 +16,15 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v4
 
-    # - name: Set up Azure ML CLI in virtual environment
-    #   run: |
-    #     python3 -m venv .venv
-    #     source .venv/bin/activate
-    #     pip install --upgrade pip
-    #     pip install rpds-py
-    #     az extension remove --name ml || true
-    #     az extension add --name ml --allow-preview
-    #     az configure --defaults group=$GROUP workspace=$WORKSPACE location=$LOCATION
+    - name: Set up Azure ML CLI in virtual environment
+      run: |
+        python3 -m venv .venv
+        source .venv/bin/activate
+        pip install --upgrade pip
+        pip install rpds-py
+        az extension remove --name ml || true
+        az extension add --name ml --allow-preview
+        az configure --defaults group=$GROUP workspace=$WORKSPACE location=$LOCATION
       
     - name: Azure Login
       uses: azure/login@v2
