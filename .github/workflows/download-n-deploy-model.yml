@@ -1,0 +1,80 @@
+name: Download and Deploy model
+
+on:
+  workflow_dispatch:
+
+env:
+  GROUP: mlops-project
+  WORKSPACE: mlops-project-ai
+  LOCATION: westeurope
+
+jobs:
+  download:
+    runs-on: [self-hosted, Linux]
+    steps:
+
+    - name: Check out repository
+      uses: actions/checkout@v4
+      
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Azure -- Download Model
+      uses: azure/CLI@v2.1.0
+      with:
+        azcliversion: 2.64.0
+        inlineScript: |
+          az extension add --name ml -y
+          az configure --defaults group=$GROUP workspace=$WORKSPACE location=$LOCATION
+          VERSION=$(az ml model list -n movement-classification --query "[0].version" -o tsv)
+          az ml model download --name movement-classification --version $VERSION --download-path ./movement-classification
+    
+    - name: Docker -- Upload API code from Inference
+      uses: actions/upload-artifact@v4.3.3
+      with:
+        name: docker-config
+        path: inference
+
+  deploy:
+    needs: download
+    runs-on: [self-hosted, Linux]
+    steps:
+    - name: Docker -- Gather Tags
+      id: docker-meta-data
+      uses: docker/metadata-action@v5.5.1
+      with:
+        images: |
+          ghcr.io/merlijn123/mlops-movement-classification-ai
+        tags: |
+          type=ref,event=branch
+          type=sha
+    
+    - name: Docker -- Login to GHCR
+      uses: docker/login-action@v3.2.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Docker -- Login to Docker Hub
+      uses: docker/login-action@v3.2.0
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+
+    # Download artifact from previous step
+    - name: Docker -- Download API Code for Inference
+      uses: actions/download-artifact@v4.1.7
+      with:
+        name: docker-config
+        path: inference
+
+    - name: Docker Build and push
+      id: docker_build
+      uses: docker/build-push-action@v5.3.0
+      with:
+        context: ./inference
+        push: true
+        tags: ${{ steps.docker-meta-data.outputs.tags }}
