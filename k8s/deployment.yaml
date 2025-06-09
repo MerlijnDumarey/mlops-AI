@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: movement-classification-deployment
+  labels:
+    app: movement-classification
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: movement-classification
+  template:
+    metadata:
+      labels:
+        app: movement-classification
+    spec:
+      containers:
+      - name: movement-classification-container
+        image: merlijn123/mlops-movement-classification-ai:main
+        ports:
+        - containerPort: 80

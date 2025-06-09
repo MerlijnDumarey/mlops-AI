@@ -1,0 +1,10 @@
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: k3s-default
+servers: 1
+agents: 3
+ports:
+  - port: 30000-30020:30000-30020
+    nodeFilters:
+      - server:0
