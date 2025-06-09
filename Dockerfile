@@ -1,5 +1,7 @@
-FROM alpine
+FROM python:3.9-slim
 
+WORKDIR /model
 COPY movement-classification /model
 
-CMD ["ls", "/model"]
+EXPOSE 80
+CMD ["python3", "-m", "http.server", "80"]
