@@ -31,19 +31,24 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
         
-    - name: Download Azure ML model
+    - name: Download Azure ML Model
       run: |
-        export AZURE_CORE_LOG_LEVEL=debug
+        az account show
+        az --version
         VERSION=$(az ml model list --name movement-classification --query "[0].version" -o tsv)
         echo "Using model version: $VERSION"
         az ml model show --name movement-classification --version 3
-        az ml model download \
+        AZURE_CORE_LOG_LEVEL=DEBUG az ml model download \
           --name movement-classification \
           --version $VERSION \
           --download-path ./movement-classification \
           --resource-group $GROUP \
-          --workspace-name $WORKSPACE
-
+          --workspace-name $WORKSPACE \
+          --debug # Add this!
+      env:
+        GROUP: mlops-project
+        WORKSPACE: mlops-project-ai
+        LOCATION: westeurope
 
     
     - name: Docker -- Upload API code from Inference
