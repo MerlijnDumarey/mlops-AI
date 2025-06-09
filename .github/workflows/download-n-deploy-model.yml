@@ -25,19 +25,14 @@ jobs:
       run: |
         python3 -m venv .venv
         source .venv/bin/activate
-    
         pip install --upgrade pip
-        pip install azure-ai-ml
-    
+        pip install rpds-py
         az extension remove --name ml || true
-        az extension add --name ml --yes
-
+        az extension add --name ml --allow-preview
+        az configure --defaults group=$GROUP workspace=$WORKSPACE location=$LOCATION
+        
     - name: Download Azure ML model
       run: |
-        source .venv/bin/activate
-    
-        az configure --defaults group=$GROUP workspace=$WORKSPACE location=$LOCATION
-    
         VERSION=$(az ml model list --name movement-classification --query "[0].version" -o tsv)
         echo "Using model version: $VERSION"
     
