@@ -1,7 +1,7 @@
 $schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
 
 type: pipeline
-name: training-20250610
+name: training
 display_name: training
 experiment_name: training
 
@@ -9,7 +9,7 @@ inputs:
   epochs: 5
   splitted_train_data:
     type: uri_folder
-    path: azureml:splitted_train_data:5
+    path: azureml:data_split@latest
 
 outputs:
   model: 
