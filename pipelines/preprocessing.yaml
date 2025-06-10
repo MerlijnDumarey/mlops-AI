@@ -24,6 +24,7 @@ outputs:
     mode: upload
     name: splitted_train_data
     type: uri_folder
+    path: azureml://datastores/workspaceblobstore/paths/azureml/preprocessing-${{name}}/output_data/
   
 
 settings:
