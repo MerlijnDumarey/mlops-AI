@@ -52,5 +52,8 @@ jobs:
       train_ratio: ${{parent.inputs.train_ratio}}
       val_ratio: ${{parent.inputs.val_ratio}}
     outputs:
-      output_data: ${{parent.outputs.splitted_data}}
-      path: azureml://datastores/workspaceblobstore/paths/azureml/${{parent.inputs.job_id}}/output_data/
+      output_data: 
+        type: uri_folder
+        mode: upload
+        path: azureml://datastores/workspaceblobstore/paths/azureml/${{parent.inputs.job_id}}/output_data/
+      
