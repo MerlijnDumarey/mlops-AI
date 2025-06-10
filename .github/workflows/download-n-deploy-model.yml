@@ -92,7 +92,15 @@ jobs:
 
     - name: Install kubectl
       run: |
+        echo "Fetching latest stable kubectl version..."
         KUBECTL_VERSION=$(curl -s https://dl.k8s.io/release/stable.txt)
+        echo "Latest version is: $KUBECTL_VERSION"
+    
+        if [ -z "$KUBECTL_VERSION" ]; then
+          echo "Failed to get kubectl version, using fallback v1.29.2"
+          KUBECTL_VERSION="v1.29.2"
+        fi
+    
         curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
         chmod +x kubectl
         mkdir -p $HOME/.local/bin
