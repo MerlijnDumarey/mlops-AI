@@ -10,6 +10,10 @@ inputs:
   splitted_train_data:
     type: uri_folder
     path: azureml:splitted_train_data:4
+  version_tag:
+    type: string
+    default: "run-${{timestamp}}"
+
 outputs:
   model: 
     mode: upload
@@ -37,5 +41,6 @@ jobs:
       model_name: movement-classification
       model_type: custom_model
       model_path: ${{parent.jobs.training.outputs.output_folder}}
+      version_tag: ${{parent.inputs.version_tag}}
     outputs:
       registration_details_folder: ${{ parent.outputs.registration_details }}
