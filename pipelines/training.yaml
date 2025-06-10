@@ -9,7 +9,7 @@ inputs:
   epochs: 5
   splitted_train_data:
     type: uri_folder
-    path: azureml:data_split@latest
+    path: azureml:splitted_train_data@latest
 
 outputs:
   model: 
