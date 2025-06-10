@@ -63,21 +63,14 @@ jobs:
           --file ./pipelines/preprocessing.yaml \
           --stream \
           --set name=preprocessing-${{ github.sha }}-${{ github.run_id }}
-        echo "Github sha: ${{ github.sha }}"
           
     - name: Register Preprocessed Dataset
       run: |
         az ml data create \
           --name data_split \
           --type uri_folder \
-          --path "azureml://subscriptions/07b367fa-faf9-49cf-9605-d96e47c0a0c7/resourcegroups/mlops-project/workspaces/mlops-project-ai/datastores/workspaceblobstore/paths/azureml/preprocessing-${{ github.sha }}-${{ github.run_id }}/output_data/" \
+          --path "azureml://subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourcegroups/${{ GROUP }}/workspaces/${{ WORKSPACE }}/datastores/workspaceblobstore/paths/azureml/preprocessing-${{ github.sha }}-${{ github.run_id }}/output_data/" \
           --description "Training split from preprocessing pipeline"
-
-    # Add a step right here. Just after the preprocessing pipeline has finished, execute following command
-    # az ml data create --name data_split 
-#       --type uri_folder 
-#       --path "azureml://subscriptions/07b367fa-faf9-49cf-9605-d96e47c0a0c7/resourcegroups/mlops-project/workspaces/mlops-project-ai/datastores/workspaceblobstore/paths/azureml/{correct value here}/output_data/" 
-#       --description "Training split from preproc. pipeline"
 
     - name: Run Training Pipeline & Stop Compute
       run: |
