@@ -64,8 +64,7 @@ jobs:
         az ml job create \
           --file ./pipelines/training.yaml \
           --stream \
-          --set name=training-${{ github.sha }}-${{ github.run_id }} \
-          --set version_tag=run-$(date +%s)
+          --set name=training-${{ github.sha }}-${{ github.run_id }}
           
         az ml compute stop --name ai-training-compute
       continue-on-error: true
