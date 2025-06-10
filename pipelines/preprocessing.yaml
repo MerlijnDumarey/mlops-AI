@@ -1,17 +1,17 @@
 $schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
 
 type: pipeline
-name: preprocessing-20250607-3
-display_name: Prepocessing 3
-experiment_name: Preprocessing 3
+name: preprocessing
+display_name: Prepocessing
+experiment_name: Preprocessing
 
 inputs:
   train_data:
     type: uri_file
-    path: azureml:train_data:1
+    path: azureml:train_data@latest
   train_label:
     type: uri_file
-    path: azureml:train_label:1
+    path: azureml:train_label@latest
   train_ratio: 0.8
   val_ratio: 0.1
 
