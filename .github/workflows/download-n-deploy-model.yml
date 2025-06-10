@@ -90,3 +90,28 @@ jobs:
         push: true
         tags: ${{ steps.docker-meta-data.outputs.tags }}
 
+    - name: Install kubectl
+      run: |
+        curl -LO "https://dl.k8s.io/release/$(curl -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        chmod +x kubectl
+        mkdir -p $HOME/.local/bin
+        mv kubectl $HOME/.local/bin/
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+    
+    - name: Verify kubectl
+      run: kubectl version --client
+
+    - name: Set up kubeconfig
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
+
+    - name: Deploy to Kubernetes
+      run: |
+        kubectl apply -f k8s/deployment.yaml
+        kubectl apply -f k8s/service.yaml
+
+    - name: Verify rollout
+      run: kubectl rollout status deployment/movement-classification-deployment
+
