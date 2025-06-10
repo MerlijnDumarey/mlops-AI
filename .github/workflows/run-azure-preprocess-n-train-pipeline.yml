@@ -69,7 +69,7 @@ jobs:
         az ml data create \
           --name data_split \
           --type uri_folder \
-          --path "azureml://subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourcegroups/${{ GROUP }}/workspaces/${{ WORKSPACE }}/datastores/workspaceblobstore/paths/azureml/preprocessing-${{ github.sha }}-${{ github.run_id }}/output_data/" \
+          --path "azureml://subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourcegroups/$GROUP/workspaces/$WORKSPACE/datastores/workspaceblobstore/paths/azureml/preprocessing-${{ github.sha }}-${{ github.run_id }}/output_data/" \
           --description "Training split from preprocessing pipeline"
 
     - name: Run Training Pipeline & Stop Compute
