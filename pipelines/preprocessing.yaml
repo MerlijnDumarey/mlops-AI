@@ -14,6 +14,7 @@ inputs:
     path: azureml:train_label@latest
   train_ratio: 0.8
   val_ratio: 0.1
+  job_id: preprocessing-default
 
 outputs:
   cleaned_data:
@@ -24,7 +25,7 @@ outputs:
     mode: upload
     name: splitted_train_data
     type: uri_folder
-    path: azureml://datastores/workspaceblobstore/paths/azureml/preprocessing-${{name}}/output_data/
+    path: azureml://datastores/workspaceblobstore/paths/azureml/${{inputs.job_id}}/output_data/
   
 
 settings:
