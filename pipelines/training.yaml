@@ -9,7 +9,7 @@ inputs:
   epochs: 5
   splitted_train_data:
     type: uri_folder
-    path: azureml:splitted_train_data:4
+    path: azureml:splitted_train_data:5
 
 outputs:
   model: 
@@ -40,5 +40,3 @@ jobs:
       model_path: ${{parent.jobs.training.outputs.output_folder}}
     outputs:
       registration_details_folder: ${{ parent.outputs.registration_details }}
-    settings:
-      allow_reuse: false
