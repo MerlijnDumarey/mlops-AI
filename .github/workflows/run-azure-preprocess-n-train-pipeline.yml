@@ -13,16 +13,15 @@ env:
   GROUP: mlops-project
   WORKSPACE: mlops-project-ai
   LOCATION: westeurope
-  # DEFINE THESE:
-  MODEL_NAME_IN_AML: "movement-classification" # Should match the name used in pipelines/training.yaml's register job
-  API_REPOSITORY_FULL_NAME: "MerlijnDumarey/mlops-APP" # Your APP repository
+  MODEL_NAME_IN_AML: "movement-classification" 
+  API_REPOSITORY_FULL_NAME: "MerlijnDumarey/mlops-APP" 
 
 jobs:
-  deploy-to-kubernetes: # Consider renaming this job to something like 'train-and-trigger-deploy'
+  deploy-to-kubernetes: # maybe renaming to something like 'train-and-trigger-deploy' later?
     strategy:
       fail-fast: false
       matrix:
-        runner: [self-hosted, ubuntu-latest] # Using self-hosted for all steps now
+        runner: [self-hosted, ubuntu-latest] 
     runs-on: ${{ matrix.runner }}
 
     steps:
@@ -116,7 +115,7 @@ jobs:
     - name: Trigger Model Deployment Workflow
       uses: peter-evans/repository-dispatch@v3
       with:
-        token: ${{ secrets.REPO_DISPATCH_PAT }} 
+        token: ${{ secrets.REPO_UPDATE_PAT }} 
         repository: ${{ env.API_REPOSITORY_FULL_NAME }}
         event-type: new-model-available
         client-payload: '{"run_id": "${{ github.run_id }}", "model_version": "${{ steps.get_model_version.outputs.model_version_output }}", "model_name": "${{ env.MODEL_NAME_IN_AML }}"}'
