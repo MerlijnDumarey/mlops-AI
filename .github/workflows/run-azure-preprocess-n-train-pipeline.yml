@@ -64,14 +64,21 @@ jobs:
           --stream \
           --set name=preprocessing-${{ github.sha }}-${{ github.run_id }}
           
+    - name: Get actual URI of splitted_data output
+      id: get_output_uri
+      run: |
+        uri=$(az ml job show --name preprocessing-${{ github.sha }}-${{ github.run_id }} \
+          --query "outputs.splitted_data.uri" -o tsv)
+        echo "OUTPUT_URI=$uri" >> $GITHUB_ENV
+          
     - name: Register splitted_data output as versioned data asset
       run: |
         az ml data create \
           --name splitted_train_data \
           --version ${{ github.run_id }} \
           --type uri_folder \
-          --path azureml://jobs/preprocessing-${{ github.sha }}-${{ github.run_id }}/outputs/splitted_data \
-          --description "Auto-registered from preprocessing pipeline run preprocessing-${{ github.sha }}-${{ github.run_id }}" \
+          --path ${{ env.OUTPUT_URI }} \
+          --description "Auto-registered from preprocessing pipeline run" \
           --resource-group $GROUP \
           --workspace-name $WORKSPACE
           
