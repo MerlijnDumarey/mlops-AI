@@ -36,11 +36,11 @@ jobs:
         az extension remove --name ml || true
         az extension add --name ml --allow-preview
         az configure --defaults group=$GROUP workspace=$WORKSPACE location=$LOCATION
-        
+
     - name: Create Azure ML Compute
       run: |
         az ml compute create --file ./environment/compute.yaml
-        
+
     - name: Start Azure ML Compute
       run: |
         az ml compute start --name ai-training-compute
@@ -50,53 +50,40 @@ jobs:
       run: |
         az ml environment create --file ./environment/pillow.yaml || true
         az ml environment create --file ./environment/tensorflow.yaml || true
-        
+
     - name: Create Components
       run: |
         az ml component create --file ./components/dataprep/dataprep.yaml --set version=0.2.${{ github.run_number }}
         az ml component create --file ./components/dataprep/split.yaml --set version=0.2.${{ github.run_number }}
         az ml component create --file ./components/training/training.yaml --set version=0.2.${{ github.run_number }}
-        
-    - name: Submit Preprocessing Pipeline and Capture Job Name
-      id: submit_pipeline
+
+    - name: Run Preprocessing Pipeline
       run: |
-        JOB_NAME=preprocessing-${{ github.sha }}-${{ github.run_id }}
-        echo "Submitting pipeline job: $JOB_NAME"
-        
         az ml job create \
           --file ./pipelines/preprocessing.yaml \
-          --set name=$JOB_NAME > job_output.json
-    
-        echo "job_name=$JOB_NAME" >> $GITHUB_OUTPUT
-    
-    - name: Get splitted_data Output Path
-      id: get_output_path
-      run: |
-        JOB_NAME=${{ steps.submit_pipeline.outputs.job_name }}
-        echo "⏳ Waiting for job to complete: $JOB_NAME"
-        az ml job wait --name $JOB_NAME
-        OUTPUT_PATH=$(az ml job show --name ${{ steps.submit_pipeline.outputs.job_name }} \
-          --query "outputs.splitted_data.path" -o tsv)
-        
-        echo "Output path: $OUTPUT_PATH"
-        echo "splitted_data_path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
-    
-    - name: Register splitted_data as Data Asset
+          --stream \
+          --set name=preprocessing-${{ github.sha }}-${{ github.run_id }}
+        echo "Github sha: ${{ github.sha }}"
+          
+    - name: Register Preprocessed Dataset
       run: |
         az ml data create \
-          --name splitted_train_data \
+          --name data_split \
           --type uri_folder \
-          --description "Split dataset from preprocessing pipeline" \
-          --path "${{ steps.get_output_path.outputs.splitted_data_path }}"
+          --path "azureml://subscriptions/07b367fa-faf9-49cf-9605-d96e47c0a0c7/resourcegroups/mlops-project/workspaces/mlops-project-ai/datastores/workspaceblobstore/paths/azureml/preprocessing-${{ github.sha }}-${{ github.run_id }}/output_data/" \
+          --description "Training split from preprocessing pipeline"
 
-          
-    
+    # Add a step right here. Just after the preprocessing pipeline has finished, execute following command
+    # az ml data create --name data_split 
+#       --type uri_folder 
+#       --path "azureml://subscriptions/07b367fa-faf9-49cf-9605-d96e47c0a0c7/resourcegroups/mlops-project/workspaces/mlops-project-ai/datastores/workspaceblobstore/paths/azureml/{correct value here}/output_data/" 
+#       --description "Training split from preproc. pipeline"
+
     - name: Run Training Pipeline & Stop Compute
       run: |
         az ml job create \
           --file ./pipelines/training.yaml \
           --stream \
           --set name=training-${{ github.sha }}-${{ github.run_id }}
-          
         az ml compute stop --name ai-training-compute
       continue-on-error: true
