@@ -38,6 +38,7 @@ jobs:
       model_name: movement-classification
       model_type: custom_model
       model_path: ${{parent.jobs.training.outputs.output_folder}}
-      version_tag: "run-$(date +%s)"
     outputs:
       registration_details_folder: ${{ parent.outputs.registration_details }}
+    settings:
+      allow_reuse: false
