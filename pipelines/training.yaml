@@ -12,7 +12,6 @@ inputs:
     path: azureml:splitted_train_data:4
   version_tag:
     type: string
-    default: "run-${{timestamp}}"
 
 outputs:
   model: 
