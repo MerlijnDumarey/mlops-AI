@@ -1,9 +1,9 @@
 $schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
 
 type: pipeline
-name: training-20250607-24
-display_name: training 24
-experiment_name: training 24
+name: training-20250610
+display_name: training
+experiment_name: training
 
 inputs:
   epochs: 5
