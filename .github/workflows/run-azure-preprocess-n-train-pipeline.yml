@@ -13,16 +13,10 @@ env:
   GROUP: mlops-project
   WORKSPACE: mlops-project-ai
   LOCATION: westeurope
-  MODEL_NAME_IN_AML: "movement-classification" 
-  API_REPOSITORY_FULL_NAME: "MerlijnDumarey/mlops-APP" 
 
 jobs:
-  deploy-to-kubernetes: # maybe renaming to something like 'train-and-trigger-deploy' later?
-    strategy:
-      fail-fast: false
-      matrix:
-        runner: [self-hosted, ubuntu-latest] 
-    runs-on: ${{ matrix.runner }}
+  run-pipelines:
+    runs-on: [self-hosted, Linux]
 
     steps:
     - name: Checkout repository
@@ -38,84 +32,38 @@ jobs:
         python3 -m venv .venv
         source .venv/bin/activate
         pip install --upgrade pip
-        pip install rpds-py # If still needed by other scripts
+        pip install rpds-py
         az extension remove --name ml || true
         az extension add --name ml --allow-preview
         az configure --defaults group=$GROUP workspace=$WORKSPACE location=$LOCATION
-
     - name: Create Azure ML Compute
       run: |
         az ml compute create --file ./environment/compute.yaml
-      continue-on-error: true # likely already exists
-
     - name: Start Azure ML Compute
       run: |
         az ml compute start --name ai-training-compute
-      continue-on-error: true 
+      continue-on-error: true
 
     - name: Create Environments
       run: |
         az ml environment create --file ./environment/pillow.yaml || true
         az ml environment create --file ./environment/tensorflow.yaml || true
-
     - name: Create Components
       run: |
-        # Using a fixed version or a more robust versioning strategy for components is recommended
-        # For simplicity, using run_number here, but consider semantic versioning.
         az ml component create --file ./components/dataprep/dataprep.yaml --set version=0.2.${{ github.run_number }}
         az ml component create --file ./components/dataprep/split.yaml --set version=0.2.${{ github.run_number }}
         az ml component create --file ./components/training/training.yaml --set version=0.2.${{ github.run_number }}
-
     - name: Run Preprocessing Pipeline
-      id: preprocessing_job
       run: |
-        PREPROCESSING_JOB_NAME="preprocessing-${{ github.sha }}-${{ github.run_id }}"
-        echo "Submitting Preprocessing Pipeline: $PREPROCESSING_JOB_NAME"
         az ml job create \
           --file ./pipelines/preprocessing.yaml \
           --stream \
-          --set name=$PREPROCESSING_JOB_NAME
-        echo "preprocessing_job_name_output=$PREPROCESSING_JOB_NAME" >> $GITHUB_OUTPUT
-
-    - name: Run Training Pipeline (which includes model registration)
-      id: training_job
+          --set name=preprocessing-${{ github.sha }}-${{ github.run_id }}
+    - name: Run Training Pipeline & Stop Compute
       run: |
-        TRAINING_JOB_NAME="training-${{ github.sha }}-${{ github.run_id }}"
-        echo "Submitting Training Pipeline: $TRAINING_JOB_NAME"
-        # This pipeline (pipelines/training.yaml) now handles model registration internally
         az ml job create \
           --file ./pipelines/training.yaml \
           --stream \
-          --set name=$TRAINING_JOB_NAME
-        echo "training_job_name_output=$TRAINING_JOB_NAME" >> $GITHUB_OUTPUT
-
-    - name: Get Registered Model Version
-      id: get_model_version
-      run: |
-        echo "Fetching latest version for model: ${{ env.MODEL_NAME_IN_AML }}"
-        # Ensure the model name here matches exactly what's registered by the pipeline
-        MODEL_VERSION=$(az ml model list --name "${{ env.MODEL_NAME_IN_AML }}" --query "[0].version" -o tsv)
-        if [ -z "$MODEL_VERSION" ]; then
-          echo "Error: Could not fetch latest version for model ${{ env.MODEL_NAME_IN_AML }}."
-          echo "Ensure the model was registered successfully by the training pipeline."
-          # List models to help debug:
-          az ml model list --output table
-          exit 1
-        fi
-        echo "Latest registered model version is: $MODEL_VERSION"
-        echo "model_version_output=$MODEL_VERSION" >> $GITHUB_OUTPUT
-
-    - name: Stop Azure ML Compute (Optional - if not handled by pipeline)
-      if: always() 
-      run: |
-        echo "Attempting to stop Azure ML Compute..."
+          --set name=training-${{ github.sha }}-${{ github.run_id }}
         az ml compute stop --name ai-training-compute
       continue-on-error: true
-
-    - name: Trigger Model Deployment Workflow
-      uses: peter-evans/repository-dispatch@v3
-      with:
-        token: ${{ secrets.REPO_UPDATE_PAT }} 
-        repository: ${{ env.API_REPOSITORY_FULL_NAME }}
-        event-type: new-model-available
-        client-payload: '{"run_id": "${{ github.run_id }}", "model_version": "${{ steps.get_model_version.outputs.model_version_output }}", "model_name": "${{ env.MODEL_NAME_IN_AML }}"}'
