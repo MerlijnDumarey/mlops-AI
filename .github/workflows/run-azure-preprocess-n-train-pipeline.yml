@@ -72,6 +72,9 @@ jobs:
     - name: Get splitted_data Output Path
       id: get_output_path
       run: |
+        JOB_NAME=${{ steps.submit_pipeline.outputs.job_name }}
+        echo "⏳ Waiting for job to complete: $JOB_NAME"
+        az ml job wait --name $JOB_NAME
         OUTPUT_PATH=$(az ml job show --name ${{ steps.submit_pipeline.outputs.job_name }} \
           --query "outputs.splitted_data.path" -o tsv)
         
