@@ -57,34 +57,37 @@ jobs:
         az ml component create --file ./components/dataprep/split.yaml --set version=0.2.${{ github.run_number }}
         az ml component create --file ./components/training/training.yaml --set version=0.2.${{ github.run_number }}
         
-    - name: Run Preprocessing Pipeline
+    - name: Submit Preprocessing Pipeline and Capture Job Name
+      id: submit_pipeline
       run: |
+        JOB_NAME=preprocessing-${{ github.sha }}-${{ github.run_id }}
+        echo "Submitting pipeline job: $JOB_NAME"
+        
         az ml job create \
           --file ./pipelines/preprocessing.yaml \
-          --stream \
-          --set name=preprocessing-${{ github.sha }}-${{ github.run_id }}
-          
-    - name: Get actual URI of splitted_data output
-      id: get_output_uri
+          --set name=$JOB_NAME > job_output.json
+    
+        echo "job_name=$JOB_NAME" >> $GITHUB_OUTPUT
+    
+    - name: Get splitted_data Output Path
+      id: get_output_path
       run: |
-        echo "Fetching splitted_data URI for job preprocessing-${{ github.sha }}-${{ github.run_id }}"
-        az ml job show --name preprocessing-${{ github.sha }}-${{ github.run_id }} --output json
-        uri=$(az ml job show --name preprocessing-${{ github.sha }}-${{ github.run_id }} --query "outputs.splitted_data.uri" -o tsv)
-        echo "Resolved OUTPUT_URI: $uri"
-        echo "OUTPUT_URI=$uri" >> $GITHUB_ENV
-
-          
-    - name: Register splitted_data output as versioned data asset
+        OUTPUT_PATH=$(az ml job show --name ${{ steps.submit_pipeline.outputs.job_name }} \
+          --query "outputs.splitted_data.path" -o tsv)
+        
+        echo "Output path: $OUTPUT_PATH"
+        echo "splitted_data_path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
+    
+    - name: Register splitted_data as Data Asset
       run: |
         az ml data create \
           --name splitted_train_data \
-          --version ${{ github.run_id }} \
           --type uri_folder \
-          --path ${{ env.OUTPUT_URI }} \
-          --description "Auto-registered from preprocessing pipeline run" \
-          --resource-group $GROUP \
-          --workspace-name $WORKSPACE
+          --description "Split dataset from preprocessing pipeline" \
+          --path "${{ steps.get_output_path.outputs.splitted_data_path }}"
+
           
+    
     - name: Run Training Pipeline & Stop Compute
       run: |
         az ml job create \
