@@ -116,6 +116,11 @@ jobs:
         kubectl apply -f k8s/deployment.yaml
         kubectl apply -f k8s/service.yaml
 
+    - name: Force rollout
+      run: |
+        kubectl patch deployment movement-classification-deployment \
+          -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"restartedAt\":\"$(date +%s)\"}}}}}"
+
     - name: Verify rollout
       run: kubectl rollout status deployment/movement-classification-deployment
 
