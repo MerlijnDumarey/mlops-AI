@@ -41,7 +41,7 @@ jobs:
         echo "$VERSION" | od -c
         AZURE_CORE_LOG_LEVEL=DEBUG az ml model download \
           --name movement-classification \
-          --version 3 \
+          --version 7 \
           --download-path ./movement-classification \
           --resource-group $GROUP \
           --workspace-name $WORKSPACE \
@@ -115,6 +115,11 @@ jobs:
       run: |
         kubectl apply -f k8s/deployment.yaml
         kubectl apply -f k8s/service.yaml
+
+    - name: Force rollout
+      run: |
+        kubectl patch deployment movement-classification-deployment \
+          -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"restartedAt\":\"$(date +%s)\"}}}}}"
 
     - name: Verify rollout
       run: kubectl rollout status deployment/movement-classification-deployment
