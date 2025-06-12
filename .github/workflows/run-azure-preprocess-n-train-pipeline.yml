@@ -36,6 +36,9 @@ jobs:
         cd components/dataprep/code
         python setup.py sdist bdist_wheel
 
+    - name: Install jq
+      run: sudo apt-get update && sudo apt-get install -y jq
+
     - name: Check if version exists on PyPI
       id: check_version
       run: |
@@ -52,6 +55,7 @@ jobs:
           echo "skip_upload=false" >> $GITHUB_OUTPUT
         fi
 
+
     - name: Publish to PyPI
       if: steps.check_version.outputs.skip_upload == 'false'
       run: |
@@ -62,7 +66,9 @@ jobs:
           --username __token__ \
           --password ${{ secrets.PYPI_TOKEN }} \
           dist/*
+          
   run-pipelines:
+    needs: build-and-upload-package
     runs-on: [self-hosted, Linux]
     permissions:
       contents: write
@@ -111,6 +117,20 @@ jobs:
         az ml component create --file ./components/dataprep/dataprep.yaml --set version=0.2.${{ github.run_number }}
         az ml component create --file ./components/dataprep/split.yaml --set version=0.2.${{ github.run_number }}
         az ml component create --file ./components/training/training.yaml --set version=0.2.${{ github.run_number }}
+
+    - name: Upload H5 files as Data Assets
+      run: |
+        az ml data create --name train_data \
+                          --type uri_file \
+                          --path ./data/train_data.h5 \
+                          --version 0.2.${{ github.run_number }} \
+                          --description "Training input data"
+                          
+        az ml data create --name train_label \
+                          --type uri_file \
+                          --path ./data/train_label.h5 \
+                          --version 0.2.${{ github.run_number }} \
+                          --description "Training labels"
 
     - name: Run Preprocessing Pipeline
       run: |
