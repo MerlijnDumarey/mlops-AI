@@ -16,6 +16,9 @@ env:
 
 jobs:
   build-and-upload-package:
+    permissions:
+      contents: write
+      packages: write 
     name: Build and Upload MLOps Package
     runs-on: [self-hosted, Linux]
 
@@ -68,18 +71,10 @@ jobs:
   run-pipelines:
     needs: build-and-upload-package
     runs-on: [self-hosted, Linux]
-    permissions:
-      contents: write
-      packages: write 
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-
-    - name: Set up clean Python for Azure CLI
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.9'
 
     - name: Login to Azure
       uses: azure/login@v2
