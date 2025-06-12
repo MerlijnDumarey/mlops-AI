@@ -15,6 +15,36 @@ env:
   LOCATION: westeurope
 
 jobs:
+  build-and-upload-package:
+    name: Build and Upload MLOps Package
+    runs-on: [self-hosted, Linux]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+
+    - name: Install build tools
+      run: pip install setuptools wheel twine
+
+    - name: Build package
+      run: |
+        cd components/dataprep/code
+        python setup.py sdist bdist_wheel
+
+    - name: Publish to PyPI
+      run: |
+        cd components/dataprep/code
+        pip install twine
+        python -m twine upload \
+          --repository-url https://upload.pypi.org/legacy/ \
+          --username __token__ \
+          --password ${{ secrets.PYPI_TOKEN }} \
+          dist/*
   run-pipelines:
     runs-on: [self-hosted, Linux]
     permissions:
@@ -25,29 +55,10 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Set up Python for Package
+    - name: Set up clean Python for Azure CLI
       uses: actions/setup-python@v5
       with:
         python-version: '3.9'
-
-    - name: Install build tools for Package
-      run: pip install setuptools wheel twine
-
-    - name: Build cleaning package
-      run: |
-        cd components/dataprep/code
-        python setup.py sdist bdist_wheel
-
-    - name: Publish to PyPI
-      run: |
-        cd components/dataprep/code
-        pip install twine
-        
-        python -m twine upload \
-          --repository-url https://upload.pypi.org/legacy/ \
-          --username __token__ \
-          --password ${{ secrets.PYPI_TOKEN }} \
-          dist/*
 
     - name: Login to Azure
       uses: azure/login@v2
