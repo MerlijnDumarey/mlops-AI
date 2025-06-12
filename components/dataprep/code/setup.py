@@ -6,8 +6,11 @@ setup(
     py_modules=["mlops_cleaning"],
     install_requires=[
         "h5py",
-        "pandas",
+        "pandas", 
         "numpy",
-        "scikit-learn" 
+        "scikit-learn"
     ],
+    url="https://github.com/MerlijnDumarey/mlops-AI",
+    author="Merlijn Dumarey",
+    author_email="merlijn.dumarey@student.howest.be",
 )
