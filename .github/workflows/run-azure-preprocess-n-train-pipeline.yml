@@ -17,10 +17,39 @@ env:
 jobs:
   run-pipelines:
     runs-on: [self-hosted, Linux]
+    permissions:
+      contents: write
+      packages: write 
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+
+    - name: Set up Python for Package
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+
+    - name: Install build tools for Package
+      run: pip install setuptools wheel twine
+
+    - name: Build cleaning package
+      run: |
+        cd components/dataprep/code
+        python setup.py sdist bdist_wheel
+
+    - name: Publish to GitHub Packages
+      env: 
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        cd components/dataprep/code
+        pip install twine # Re-install twine just in case, though it's installed above.
+
+        python -m twine upload \
+          --repository-url https://pip.pkg.github.com/MerlijnDumarey \
+          --username ${{ github.actor }} \
+          --password ${{ secrets.GITHUB_TOKEN }} \
+          dist/*
 
     - name: Login to Azure
       uses: azure/login@v2
@@ -63,7 +92,7 @@ jobs:
           --file ./pipelines/preprocessing.yaml \
           --stream \
           --set name=preprocessing-${{ github.sha }}-${{ github.run_id }} \
-             inputs.job_id=preprocessing-${{ github.sha }}-${{ github.run_id }}
+              inputs.job_id=preprocessing-${{ github.sha }}-${{ github.run_id }}
 
         echo "preprocessing-${{ github.sha }}-${{ github.run_id }}"
           
@@ -86,30 +115,3 @@ jobs:
           --set name=training-${{ github.sha }}-${{ github.run_id }}
         az ml compute stop --name ai-training-compute
       continue-on-error: true
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.9'
-
-    - name: Install build tools
-      run: pip install setuptools wheel twine
-
-    - name: Build cleaning package
-      run: |
-        cd components/dataprep/code
-        python setup.py sdist bdist_wheel
-
-    - name: Publish to GitHub Packages
-      env:  
-        GITHUB_ACTOR: ${{ secrets.actor }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        cd components/dataprep/code
-        pip install twine
-
-        python -m twine upload \
-          --repository-url https://pip.pkg.github.com/MerlijnDumarey \
-          --username ${{ secrets.actor }} \
-          --password ${{ secrets.GITHUB_TOKEN }}
-        dist/*
