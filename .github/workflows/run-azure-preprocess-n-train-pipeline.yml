@@ -36,9 +36,6 @@ jobs:
         cd components/dataprep/code
         python setup.py sdist bdist_wheel
 
-    - name: Install jq
-      run: sudo apt-get update && sudo apt-get install -y jq
-
     - name: Check if version exists on PyPI
       id: check_version
       run: |
@@ -46,14 +43,15 @@ jobs:
         VERSION=$(python setup.py --version)
         echo "Detected version: $VERSION"
         echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-        EXISTS=$(curl -s https://pypi.org/pypi/mlops-cleaning/json | jq ".releases[\"$VERSION\"]")
-        if [ "$EXISTS" != "null" ]; then
-          echo "Version $VERSION already exists on PyPI. Skipping upload."
-          echo "skip_upload=true" >> $GITHUB_OUTPUT
+        EXISTS=$(curl -s https://pypi.org/pypi/mlops-cleaning/json | \
+          python -c "import sys, json; data=json.load(sys.stdin); print('true' if '$VERSION' in data['releases'] else 'false')")
+        if [ \"$EXISTS\" == \"true\" ]; then
+          echo \"Version $VERSION already exists on PyPI. Skipping upload.\"
+          echo \"skip_upload=true\" >> $GITHUB_OUTPUT
         else
-          echo "skip_upload=false" >> $GITHUB_OUTPUT
+          echo \"skip_upload=false\" >> $GITHUB_OUTPUT
         fi
+
 
 
     - name: Publish to PyPI
