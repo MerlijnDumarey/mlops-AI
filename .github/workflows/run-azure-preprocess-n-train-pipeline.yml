@@ -46,7 +46,7 @@ jobs:
         pip install twine # Re-install twine just in case, though it's installed above.
 
         python -m twine upload \
-          --repository-url https://pip.pkg.github.com/MerlijnDumarey \
+          --repository-url https://pip.pkg.github.com/MerlijnDumarey/mlops-AI \
           --username ${{ github.actor }} \
           --password ${{ secrets.GITHUB_TOKEN }} \
           dist/*
