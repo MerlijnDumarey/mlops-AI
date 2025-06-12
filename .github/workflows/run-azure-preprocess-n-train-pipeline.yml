@@ -36,7 +36,24 @@ jobs:
         cd components/dataprep/code
         python setup.py sdist bdist_wheel
 
+    - name: Check if version exists on PyPI
+      id: check_version
+      run: |
+        cd components/dataprep/code
+        VERSION=$(python setup.py --version)
+        echo "Detected version: $VERSION"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+        EXISTS=$(curl -s https://pypi.org/pypi/mlops-cleaning/json | jq ".releases[\"$VERSION\"]")
+        if [ "$EXISTS" != "null" ]; then
+          echo "Version $VERSION already exists on PyPI. Skipping upload."
+          echo "skip_upload=true" >> $GITHUB_OUTPUT
+        else
+          echo "skip_upload=false" >> $GITHUB_OUTPUT
+        fi
+
     - name: Publish to PyPI
+      if: steps.check_version.outputs.skip_upload == 'false'
       run: |
         cd components/dataprep/code
         pip install twine
